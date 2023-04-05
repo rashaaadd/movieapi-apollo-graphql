@@ -3,6 +3,8 @@ import argon2 from "argon2";
 import { User } from "../entities";
 import * as jwt from "jsonwebtoken";
 import { Context } from "../types/Context";
+import { GraphQLError } from "graphql";
+import { popErr } from "../utils/errorHandler";
 
 export const AuthType = objectType({
   name: "AuthType",
@@ -25,22 +27,25 @@ export const AuthMutation = extendType({
         password: nonNull(stringArg()),
       },
       async resolve(_parent, args, _context, _info) {
-        const { username, password } = args;
-        const user = await User.findOne({where: {username}});
-        if(!user){
-            throw new Error("User not found.")
-        }
-        const isValid = await argon2.verify(user.password, password);
-
-        if(!isValid){
-            throw new Error("Invalid Credentials.")
-        }
-
-        const token = jwt.sign({ userId: user.id}, process.env.JWT_SECRET_KEY as jwt.Secret)
-
-        return {
-            user,
-            token
+        try {
+          const { username, password } = args;
+          const user = await User.findOne({where: {username}});
+          if(!user){
+              throw new GraphQLError("User not found.")
+          }
+          const isValid = await argon2.verify(user.password, password);
+  
+          if(!isValid){
+              throw new GraphQLError("Invalid Credentials.")
+          }
+  
+          const token = jwt.sign({ userId: user.id}, process.env.JWT_SECRET_KEY as jwt.Secret)
+          return {
+              user,
+              token
+          }
+        } catch (error) {
+          popErr(error)
         }
       }
     });
@@ -76,7 +81,7 @@ export const AuthMutation = extendType({
             token,
           };
         } catch (error) {
-          console.log(error);
+          popErr(error);
         }
       },
     });

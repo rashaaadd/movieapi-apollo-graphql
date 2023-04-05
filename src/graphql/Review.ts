@@ -8,6 +8,8 @@ import {
 } from "nexus";
 import { Movie, Review } from "../entities";
 import { Context } from "../types/Context";
+import { popErr } from "../utils/errorHandler";
+import { GraphQLError } from "graphql";
 
 export const ReviewType = objectType({
   name: "Review",
@@ -42,7 +44,7 @@ export const ReviewQuery = extendType({
       async resolve(_parent, args, _context, _info){
         const { id } = args;
         const review = await Review.findOne({ where: { id } });
-        if (!review) throw new Error("Review not found.");
+        if (!review) throw new GraphQLError("Review not found.");
         return [review];
       },
     });
@@ -68,10 +70,9 @@ export const ReviewQuery = extendType({
                     skip: _offset,
                     take: _limit,
                   });
-                  console.log(reviews,'adasd111')
                 return reviews
             } catch (error) {
-                console.log(error)
+              popErr(error)
             }
         }
     })
@@ -95,9 +96,9 @@ export const ReviewMutation = extendType({
           const { userId } = context;
           console.log(userId, "asdasuser");
           if (!userId)
-            throw new Error("Not Authorized to perform this action.");
+            throw new GraphQLError("Not Authorized to perform this action.");
           const movie = Movie.findOne({ where: { id: movieId } });
-          if (!movie) throw new Error("Movie does not exist.");
+          if (!movie) throw new GraphQLError("Movie does not exist.");
           return Review.create({
             movieId,
             userId,
@@ -124,14 +125,14 @@ export const ReviewMutation = extendType({
           const { userId } = context;
           console.log(userId, "sdasd");
           if (!userId) {
-            throw new Error("Not Allowed to perform this action.");
+            throw new GraphQLError("Not Allowed to perform this action.");
           }
           const review = await Review.findOne({ where: { id } });
           if (!review) {
-            throw new Error("Movie does not exist.");
+            throw new GraphQLError("Movie does not exist.");
           }
           if (review.userId !== userId) {
-            throw new Error("Not Allowed to perform this action.");
+            throw new GraphQLError("Not Allowed to perform this action.");
           }
           const data = {
             rating,
@@ -140,7 +141,7 @@ export const ReviewMutation = extendType({
           await Review.update({ id }, data);
           return Review.findOne({ where: { id } });
         } catch (error) {
-          console.log(error);
+          popErr(error);
         }
       },
     });
@@ -153,15 +154,15 @@ export const ReviewMutation = extendType({
         try {
           const { id } = args;
           const { userId } = context;
-          if (!userId) throw new Error("Unauthorized to perform this action.");
+          if (!userId) throw new GraphQLError("Unauthorized to perform this action.");
           const review = await Review.findOne({ where: { id } });
-          if (!review) throw new Error("Movie does not exist.");
+          if (!review) throw new GraphQLError("Movie does not exist.");
           if (review.userId !== userId)
-            throw new Error("Unauthorized to perform this action.");
+            throw new GraphQLError("Unauthorized to perform this action.");
           await Review.delete(id);
           return true;
         } catch (error) {
-          console.log(error);
+          popErr(error);
         }
       },
     });

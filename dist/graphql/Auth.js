@@ -40,6 +40,8 @@ const nexus_1 = require("nexus");
 const argon2_1 = __importDefault(require("argon2"));
 const entities_1 = require("../entities");
 const jwt = __importStar(require("jsonwebtoken"));
+const graphql_1 = require("graphql");
+const errorHandler_1 = require("../utils/errorHandler");
 exports.AuthType = (0, nexus_1.objectType)({
     name: "AuthType",
     definition(t) {
@@ -60,20 +62,25 @@ exports.AuthMutation = (0, nexus_1.extendType)({
             },
             resolve(_parent, args, _context, _info) {
                 return __awaiter(this, void 0, void 0, function* () {
-                    const { username, password } = args;
-                    const user = yield entities_1.User.findOne({ where: { username } });
-                    if (!user) {
-                        throw new Error("User not found.");
+                    try {
+                        const { username, password } = args;
+                        const user = yield entities_1.User.findOne({ where: { username } });
+                        if (!user) {
+                            throw new graphql_1.GraphQLError("User not found.");
+                        }
+                        const isValid = yield argon2_1.default.verify(user.password, password);
+                        if (!isValid) {
+                            throw new graphql_1.GraphQLError("Invalid Credentials.");
+                        }
+                        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET_KEY);
+                        return {
+                            user,
+                            token
+                        };
                     }
-                    const isValid = yield argon2_1.default.verify(user.password, password);
-                    if (!isValid) {
-                        throw new Error("Invalid Credentials.");
+                    catch (error) {
+                        (0, errorHandler_1.popErr)(error);
                     }
-                    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET_KEY);
-                    return {
-                        user,
-                        token
-                    };
                 });
             }
         });
@@ -106,7 +113,7 @@ exports.AuthMutation = (0, nexus_1.extendType)({
                         };
                     }
                     catch (error) {
-                        console.log(error);
+                        (0, errorHandler_1.popErr)(error);
                     }
                 });
             },

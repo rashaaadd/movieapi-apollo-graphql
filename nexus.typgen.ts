@@ -33,7 +33,7 @@ export interface NexusGenObjects {
     user: NexusGenRootTypes['User']; // User!
   }
   Movie: { // root type
-    createdId: string; // String!
+    creatorId: string; // String!
     description: string; // String!
     directorName: string; // String!
     id: number; // Int!
@@ -74,7 +74,7 @@ export interface NexusGenFieldTypes {
   }
   Movie: { // field return type
     createdBy: NexusGenRootTypes['User'] | null; // User
-    createdId: string; // String!
+    creatorId: string; // String!
     description: string; // String!
     directorName: string; // String!
     id: number; // Int!
@@ -121,7 +121,7 @@ export interface NexusGenFieldTypeNames {
   }
   Movie: { // field return type name
     createdBy: 'User'
-    createdId: 'String'
+    creatorId: 'String'
     description: 'String'
     directorName: 'String'
     id: 'Int'

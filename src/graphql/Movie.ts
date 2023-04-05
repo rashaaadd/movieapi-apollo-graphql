@@ -1,7 +1,8 @@
 import { extendType, intArg, nonNull, objectType, stringArg } from "nexus";
 import { Movie, User } from "../entities";
 import { Context } from "../types/Context";
-import { resolve } from "path";
+import { GraphQLError } from "graphql";
+import { popErr } from "../utils/errorHandler";
 
 export const MovieType = objectType({
   name: "Movie",
@@ -11,7 +12,7 @@ export const MovieType = objectType({
       t.nonNull.string("description"),
       t.nonNull.string("directorName"),
       t.nonNull.string("releaseDate"),
-      t.nonNull.string("createdId"),
+      t.nonNull.string("creatorId"),
       t.field("createdBy", {
         type: "User",
         resolve(parent, _args, _context, _info): Promise<User | null> {
@@ -38,7 +39,7 @@ export const MoviesQuery = extendType({
       async resolve(_parent, args, _context, _info) {
         const { id } = args;
         const movie = await Movie.findOne({ where: { id } });
-        if (!movie) throw new Error("Review not found.");
+        if (!movie) throw new GraphQLError("Review not found.");
         console.log('hello',movie)
         return [movie];
       },
@@ -66,7 +67,7 @@ export const MoviesQuery = extendType({
           console.log(movies, "adasd111");
           return movies;
         } catch (error) {
-          console.log(error);
+          popErr(error);
         }
       },
     });
@@ -87,19 +88,21 @@ export const CreateMovieMutation = extendType({
       },
       async resolve(_parent, args, context: Context, _info) {
         try {
+          
           const { id, movieName, description, directorName, releaseDate } =
-            args;
+          args;
+          console.log( id, movieName, description, directorName, releaseDate );
 
           const { userId } = context;
           if (!userId) {
-            throw new Error("Not Allowed to perform this action.");
+            throw new GraphQLError("Not Allowed to perform this action.");
           }
           const movie = await Movie.findOne({ where: { id } });
           if (!movie) {
-            throw new Error("Movie not found.");
+            throw new GraphQLError("Movie not found.");
           }
           if (movie.creatorId !== id) {
-            throw new Error("Not Allowed to perform this action.");
+            throw new GraphQLError("Not Allowed to perform this action.");
           }
           const data = {
             movieName,
@@ -110,7 +113,7 @@ export const CreateMovieMutation = extendType({
           await Movie.update({ id }, data);
           return Movie.findOne({ where: { id } });
         } catch (error) {
-          console.log(error);
+          popErr(error);
         }
       },
     });
@@ -127,7 +130,7 @@ export const CreateMovieMutation = extendType({
           const { movieName, description, directorName, releaseDate } = args;
           const { userId } = context;
           if (!userId)
-            throw new Error("Not Authorized to perform this action.");
+            throw new GraphQLError("Not Authorized to perform this action.");
           args.creatorId = userId;
           return Movie.create({
             movieName,
@@ -137,7 +140,7 @@ export const CreateMovieMutation = extendType({
             creatorId: args.creatorId,
           }).save();
         } catch (error) {
-          console.log(error);
+          popErr(error);
         }
       },
     });
@@ -150,15 +153,15 @@ export const CreateMovieMutation = extendType({
         try {
           const { id } = args;
           const { userId } = context;
-          if (!userId) throw new Error("Unauthorized to perform this action.");
+          if (!userId) throw new GraphQLError("Unauthorized to perform this action.");
           const movie = await Movie.findOne({ where: { id } });
-          if (!movie) throw new Error("Movie does not exist.");
+          if (!movie) throw new GraphQLError("Movie does not exist.");
           if (movie.creatorId !== userId)
-            throw new Error("Unauthorized to perform this action.");
+            throw new GraphQLError("Unauthorized to perform this action.");
           await Movie.delete(id);
           return true;
         } catch (error) {
-          console.log(error);
+          popErr(error);
         }
       },
     });

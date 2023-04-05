@@ -9,7 +9,7 @@ type AuthType {
 
 type Movie {
   createdBy: User
-  createdId: String!
+  creatorId: String!
   description: String!
   directorName: String!
   id: Int!

@@ -12,6 +12,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateMovieMutation = exports.MoviesQuery = exports.MovieType = void 0;
 const nexus_1 = require("nexus");
 const entities_1 = require("../entities");
+const graphql_1 = require("graphql");
+const errorHandler_1 = require("../utils/errorHandler");
 exports.MovieType = (0, nexus_1.objectType)({
     name: "Movie",
     definition(t) {
@@ -20,7 +22,7 @@ exports.MovieType = (0, nexus_1.objectType)({
             t.nonNull.string("description"),
             t.nonNull.string("directorName"),
             t.nonNull.string("releaseDate"),
-            t.nonNull.string("createdId"),
+            t.nonNull.string("creatorId"),
             t.field("createdBy", {
                 type: "User",
                 resolve(parent, _args, _context, _info) {
@@ -48,7 +50,7 @@ exports.MoviesQuery = (0, nexus_1.extendType)({
                     const { id } = args;
                     const movie = yield entities_1.Movie.findOne({ where: { id } });
                     if (!movie)
-                        throw new Error("Review not found.");
+                        throw new graphql_1.GraphQLError("Review not found.");
                     console.log('hello', movie);
                     return [movie];
                 });
@@ -79,7 +81,7 @@ exports.MoviesQuery = (0, nexus_1.extendType)({
                         return movies;
                     }
                     catch (error) {
-                        console.log(error);
+                        (0, errorHandler_1.popErr)(error);
                     }
                 });
             },
@@ -102,16 +104,17 @@ exports.CreateMovieMutation = (0, nexus_1.extendType)({
                 return __awaiter(this, void 0, void 0, function* () {
                     try {
                         const { id, movieName, description, directorName, releaseDate } = args;
+                        console.log(id, movieName, description, directorName, releaseDate);
                         const { userId } = context;
                         if (!userId) {
-                            throw new Error("Not Allowed to perform this action.");
+                            throw new graphql_1.GraphQLError("Not Allowed to perform this action.");
                         }
                         const movie = yield entities_1.Movie.findOne({ where: { id } });
                         if (!movie) {
-                            throw new Error("Movie not found.");
+                            throw new graphql_1.GraphQLError("Movie not found.");
                         }
                         if (movie.creatorId !== id) {
-                            throw new Error("Not Allowed to perform this action.");
+                            throw new graphql_1.GraphQLError("Not Allowed to perform this action.");
                         }
                         const data = {
                             movieName,
@@ -123,7 +126,7 @@ exports.CreateMovieMutation = (0, nexus_1.extendType)({
                         return entities_1.Movie.findOne({ where: { id } });
                     }
                     catch (error) {
-                        console.log(error);
+                        (0, errorHandler_1.popErr)(error);
                     }
                 });
             },
@@ -141,7 +144,7 @@ exports.CreateMovieMutation = (0, nexus_1.extendType)({
                     const { movieName, description, directorName, releaseDate } = args;
                     const { userId } = context;
                     if (!userId)
-                        throw new Error("Not Authorized to perform this action.");
+                        throw new graphql_1.GraphQLError("Not Authorized to perform this action.");
                     args.creatorId = userId;
                     return entities_1.Movie.create({
                         movieName,
@@ -152,7 +155,7 @@ exports.CreateMovieMutation = (0, nexus_1.extendType)({
                     }).save();
                 }
                 catch (error) {
-                    console.log(error);
+                    (0, errorHandler_1.popErr)(error);
                 }
             },
         });
@@ -167,17 +170,17 @@ exports.CreateMovieMutation = (0, nexus_1.extendType)({
                         const { id } = args;
                         const { userId } = context;
                         if (!userId)
-                            throw new Error("Unauthorized to perform this action.");
+                            throw new graphql_1.GraphQLError("Unauthorized to perform this action.");
                         const movie = yield entities_1.Movie.findOne({ where: { id } });
                         if (!movie)
-                            throw new Error("Movie does not exist.");
+                            throw new graphql_1.GraphQLError("Movie does not exist.");
                         if (movie.creatorId !== userId)
-                            throw new Error("Unauthorized to perform this action.");
+                            throw new graphql_1.GraphQLError("Unauthorized to perform this action.");
                         yield entities_1.Movie.delete(id);
                         return true;
                     }
                     catch (error) {
-                        console.log(error);
+                        (0, errorHandler_1.popErr)(error);
                     }
                 });
             },

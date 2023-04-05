@@ -24,11 +24,12 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.auth = void 0;
+const graphql_1 = require("graphql");
 const jwt = __importStar(require("jsonwebtoken"));
 const auth = (headers) => {
     const token = headers.split(" ")[1];
     if (!token) {
-        throw new Error("Invalid token");
+        throw new graphql_1.GraphQLError("Invalid token");
     }
     const res = jwt.verify(token, process.env.JWT_SECRET_KEY);
     return jwt.verify(token, process.env.JWT_SECRET_KEY);
