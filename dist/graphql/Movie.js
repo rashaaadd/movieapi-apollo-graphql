@@ -26,7 +26,7 @@ exports.MovieType = (0, nexus_1.objectType)({
             t.field("createdBy", {
                 type: "User",
                 resolve(parent, _args, _context, _info) {
-                    return entities_1.User.findOne({ where: { id: parent.creator } });
+                    return entities_1.User.findOne({ where: { id: parent.creatorId } });
                 },
             });
     },
@@ -51,40 +51,43 @@ exports.MoviesQuery = (0, nexus_1.extendType)({
                     const movie = yield entities_1.Movie.findOne({ where: { id } });
                     if (!movie)
                         throw new graphql_1.GraphQLError("Review not found.");
-                    console.log('hello', movie);
+                    console.log("hello", movie);
                     return [movie];
                 });
             },
         });
-        t.nonNull.list.nonNull.field("searchMovie", {
+        t.nonNull.list.nonNull.field("searchMovies", {
             type: "Movie",
             args: {
-                page: (0, nexus_1.intArg)(),
+                query: (0, nexus_1.nonNull)((0, nexus_1.stringArg)()),
                 limit: (0, nexus_1.intArg)(),
+                offset: (0, nexus_1.intArg)(),
+                sort: (0, nexus_1.stringArg)(),
             },
-            resolve(_parent, args, _context, _info) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    try {
-                        const page = (args === null || args === void 0 ? void 0 : args.page) || 1;
-                        const limit = (args === null || args === void 0 ? void 0 : args.limit) || 10;
-                        const offset = limit * (page - 1);
-                        console.log(page, limit, offset, '1111');
-                        const movies = yield entities_1.Movie.find({
-                            where: {
-                                movieName: `${args.movieName}`,
-                                description: `${args.description}`,
-                            },
-                            skip: offset,
-                            take: limit,
-                        });
-                        console.log(movies, "adasd111");
-                        return movies;
+            resolve: (_parent, args, _context, _info) => __awaiter(this, void 0, void 0, function* () {
+                const { query, limit, offset, sort } = args;
+                try {
+                    const queryBuilder = entities_1.Movie.createQueryBuilder("movie");
+                    queryBuilder.where("movie.movieName ILIKE :query", {
+                        query: `%${query}%`,
+                    });
+                    if (sort) {
+                        const [field, order] = sort.split("_");
+                        queryBuilder.orderBy(`movie.${field}`, order);
                     }
-                    catch (error) {
-                        (0, errorHandler_1.popErr)(error);
+                    if (limit) {
+                        queryBuilder.limit(limit);
                     }
-                });
-            },
+                    if (offset) {
+                        queryBuilder.offset(offset);
+                    }
+                    const movies = yield queryBuilder.getMany();
+                    return movies;
+                }
+                catch (error) {
+                    (0, errorHandler_1.popErr)(error);
+                }
+            }),
         });
     },
 });

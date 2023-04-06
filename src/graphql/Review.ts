@@ -6,7 +6,7 @@ import {
   objectType,
   stringArg,
 } from "nexus";
-import { Movie, Review } from "../entities";
+import { Movie, Review, User } from "../entities";
 import { Context } from "../types/Context";
 import { popErr } from "../utils/errorHandler";
 import { GraphQLError } from "graphql";
@@ -18,6 +18,18 @@ export const ReviewType = objectType({
     t.nonNull.int("userId");
     t.float("rating");
     t.string("comment");
+    t.field("user",{
+      type:"User",
+      resolve(parent, _args, _context, _info): Promise<User | null> {
+        return User.findOne({ where: { id: parent.userId } });
+      },
+    })
+    t.field("movie",{
+      type:"Movie",
+      resolve(parent,_args,_context,_info) : Promise<Movie> | null {
+        return Movie.findOne({ where : { id: parent.movieId}})
+      }
+    })
   },
 });
 
@@ -36,46 +48,56 @@ export const ReviewQuery = extendType({
         return Review.find();
       },
     });
-    t.nonNull.list.nonNull.field("review", {
+    t.field("reviewById", {
       type: "Review",
       args: {
-        id: intArg(),
+        id: nonNull(intArg()),
       },
-      async resolve(_parent, args, _context, _info){
-        const { id } = args;
-        const review = await Review.findOne({ where: { id } });
-        if (!review) throw new GraphQLError("Review not found.");
-        return [review];
+      async resolve(_parent, args, _context, _info) {
+        try {
+          const { id } = args;
+          const review = await Review.findOne({ where: { id } });
+          if (!review) {
+            throw new GraphQLError(`Review not found`);
+          }
+          return review;
+        } catch (error) {
+          popErr(error);
+        }
       },
     });
     t.nonNull.list.nonNull.field("reviewsByMovie", {
-        type : "Review",
-        args: {
-            page: intArg(),
-            limit: intArg(),
-            movieId: nonNull(intArg())
-        },
-        async resolve(_parent, args, _context, _info) {
-            try {
-                const { page, limit, movieId } = args;
-
-                const pageNum = page || 1;
-                const _limit = limit || 10;
-                const _offset = _limit * ( pageNum - 1 );
-
-                const reviews = await Review.find({
-                    where: {
-                      movieId,
-                    },
-                    skip: _offset,
-                    take: _limit,
-                  });
-                return reviews
-            } catch (error) {
-              popErr(error)
-            }
+      type: "Review",
+      args: {
+        movieId: nonNull(intArg()),
+      },
+      resolve(_parent, args, _context, _info): Promise<Review[]> {
+        const { movieId } = args;
+        return Review.find({ where: { movieId } });
+      },
+    });
+    t.nonNull.list.nonNull.field("reviewsByMoviePaginated", {
+      type: "Review",
+      args: {
+        movieId: nonNull(intArg()),
+        page: nonNull(intArg()),
+        limit: nonNull(intArg()),
+      },
+      async resolve(_parent, args, _context, _info) {
+        try {
+          const { movieId, page, limit } = args;
+          const offset = (page - 1) * limit ;
+          const reviews = await Review.find({
+            where: { movieId },
+            skip: offset,
+            take: limit,
+          });
+          return reviews;
+        } catch (error) {
+          popErr(error);
         }
-    })
+      },
+    });
   },
 });
 
@@ -92,9 +114,7 @@ export const ReviewMutation = extendType({
       resolve(_parent, args, context: Context, _info): Promise<Review> {
         try {
           const { movieId, rating, comment } = args;
-          console.log({ movieId, rating, comment }, "asdas0");
           const { userId } = context;
-          console.log(userId, "asdasuser");
           if (!userId)
             throw new GraphQLError("Not Authorized to perform this action.");
           const movie = Movie.findOne({ where: { id: movieId } });

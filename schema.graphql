@@ -31,17 +31,20 @@ type Mutation {
 type Query {
   movie(id: Int!): [Movie!]!
   movies: [Movie!]!
-  review(id: Int): [Review!]!
+  reviewById(id: Int!): Review
   reviews(filter: String, limit: Int, page: Int, sort: String): [Review!]!
-  reviewsByMovie(limit: Int, movieId: Int!, page: Int): [Review!]!
-  searchMovie(limit: Int, page: Int): [Movie!]!
+  reviewsByMovie(movieId: Int!): [Review!]!
+  reviewsByMoviePaginated(limit: Int!, movieId: Int!, page: Int!): [Review!]!
+  searchMovies(limit: Int, offset: Int, query: String!, sort: String): [Movie!]!
 }
 
 type Review {
   comment: String
   id: Int!
+  movie: Movie
   movieId: Int!
   rating: Float
+  user: User
   userId: Int!
 }
 

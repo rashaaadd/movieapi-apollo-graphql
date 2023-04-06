@@ -16,7 +16,7 @@ export const MovieType = objectType({
       t.field("createdBy", {
         type: "User",
         resolve(parent, _args, _context, _info): Promise<User | null> {
-          return User.findOne({ where: { id: parent.creator } });
+          return User.findOne({ where: { id: parent.creatorId } });
         },
       });
   },
@@ -40,34 +40,44 @@ export const MoviesQuery = extendType({
         const { id } = args;
         const movie = await Movie.findOne({ where: { id } });
         if (!movie) throw new GraphQLError("Review not found.");
-        console.log('hello',movie)
+        console.log("hello", movie);
         return [movie];
       },
     });
-    t.nonNull.list.nonNull.field("searchMovie", {
+    t.nonNull.list.nonNull.field("searchMovies", {
       type: "Movie",
       args: {
-        page: intArg(),
+        query: nonNull(stringArg()),
         limit: intArg(),
+        offset: intArg(),
+        sort: stringArg(),
       },
-      async resolve(_parent, args, _context, _info) {
+      resolve: async (_parent, args, _context, _info) => {
+        const { query, limit, offset, sort } = args;
         try {
-          const page = args?.page || 1;
-          const limit = args?.limit || 10;
-          const offset = limit * (page - 1);
-          console.log(page,limit,offset,'1111')
-          const movies = await Movie.find({
-            where: {
-              movieName: `${args.movieName}`,
-              description: `${args.description}`,
-            },
-            skip: offset,
-            take: limit,
+          const queryBuilder = Movie.createQueryBuilder("movie");
+
+          queryBuilder.where("movie.movieName ILIKE :query", {
+            query: `%${query}%`,
           });
-          console.log(movies, "adasd111");
+
+          if (sort) {
+            const [field, order] = sort.split("_");
+            queryBuilder.orderBy(`movie.${field}`, order as "ASC" | "DESC");
+          }
+
+          if (limit) {
+            queryBuilder.limit(limit);
+          }
+
+          if (offset) {
+            queryBuilder.offset(offset);
+          }
+
+          const movies = await queryBuilder.getMany();
           return movies;
         } catch (error) {
-          popErr(error);
+          popErr(error)
         }
       },
     });
@@ -88,10 +98,9 @@ export const CreateMovieMutation = extendType({
       },
       async resolve(_parent, args, context: Context, _info) {
         try {
-          
           const { id, movieName, description, directorName, releaseDate } =
-          args;
-          console.log( id, movieName, description, directorName, releaseDate );
+            args;
+          console.log(id, movieName, description, directorName, releaseDate);
 
           const { userId } = context;
           if (!userId) {
@@ -153,7 +162,8 @@ export const CreateMovieMutation = extendType({
         try {
           const { id } = args;
           const { userId } = context;
-          if (!userId) throw new GraphQLError("Unauthorized to perform this action.");
+          if (!userId)
+            throw new GraphQLError("Unauthorized to perform this action.");
           const movie = await Movie.findOne({ where: { id } });
           if (!movie) throw new GraphQLError("Movie does not exist.");
           if (movie.creatorId !== userId)

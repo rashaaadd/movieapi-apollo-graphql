@@ -94,16 +94,19 @@ export interface NexusGenFieldTypes {
   Query: { // field return type
     movie: NexusGenRootTypes['Movie'][]; // [Movie!]!
     movies: NexusGenRootTypes['Movie'][]; // [Movie!]!
-    review: NexusGenRootTypes['Review'][]; // [Review!]!
+    reviewById: NexusGenRootTypes['Review'] | null; // Review
     reviews: NexusGenRootTypes['Review'][]; // [Review!]!
     reviewsByMovie: NexusGenRootTypes['Review'][]; // [Review!]!
-    searchMovie: NexusGenRootTypes['Movie'][]; // [Movie!]!
+    reviewsByMoviePaginated: NexusGenRootTypes['Review'][]; // [Review!]!
+    searchMovies: NexusGenRootTypes['Movie'][]; // [Movie!]!
   }
   Review: { // field return type
     comment: string | null; // String
     id: number; // Int!
+    movie: NexusGenRootTypes['Movie'] | null; // Movie
     movieId: number; // Int!
     rating: number | null; // Float
+    user: NexusGenRootTypes['User'] | null; // User
     userId: number; // Int!
   }
   User: { // field return type
@@ -141,16 +144,19 @@ export interface NexusGenFieldTypeNames {
   Query: { // field return type name
     movie: 'Movie'
     movies: 'Movie'
-    review: 'Review'
+    reviewById: 'Review'
     reviews: 'Review'
     reviewsByMovie: 'Review'
-    searchMovie: 'Movie'
+    reviewsByMoviePaginated: 'Review'
+    searchMovies: 'Movie'
   }
   Review: { // field return type name
     comment: 'String'
     id: 'Int'
+    movie: 'Movie'
     movieId: 'Int'
     rating: 'Float'
+    user: 'User'
     userId: 'Int'
   }
   User: { // field return type name
@@ -207,8 +213,8 @@ export interface NexusGenArgTypes {
     movie: { // args
       id: number; // Int!
     }
-    review: { // args
-      id?: number | null; // Int
+    reviewById: { // args
+      id: number; // Int!
     }
     reviews: { // args
       filter?: string | null; // String
@@ -217,13 +223,18 @@ export interface NexusGenArgTypes {
       sort?: string | null; // String
     }
     reviewsByMovie: { // args
-      limit?: number | null; // Int
       movieId: number; // Int!
-      page?: number | null; // Int
     }
-    searchMovie: { // args
+    reviewsByMoviePaginated: { // args
+      limit: number; // Int!
+      movieId: number; // Int!
+      page: number; // Int!
+    }
+    searchMovies: { // args
       limit?: number | null; // Int
-      page?: number | null; // Int
+      offset?: number | null; // Int
+      query: string; // String!
+      sort?: string | null; // String
     }
   }
 }

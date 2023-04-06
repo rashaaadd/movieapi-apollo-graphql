@@ -21,6 +21,18 @@ exports.ReviewType = (0, nexus_1.objectType)({
         t.nonNull.int("userId");
         t.float("rating");
         t.string("comment");
+        t.field("user", {
+            type: "User",
+            resolve(parent, _args, _context, _info) {
+                return entities_1.User.findOne({ where: { id: parent.userId } });
+            },
+        });
+        t.field("movie", {
+            type: "Movie",
+            resolve(parent, _args, _context, _info) {
+                return entities_1.Movie.findOne({ where: { id: parent.movieId } });
+            }
+        });
     },
 });
 exports.ReviewQuery = (0, nexus_1.extendType)({
@@ -38,41 +50,53 @@ exports.ReviewQuery = (0, nexus_1.extendType)({
                 return entities_1.Review.find();
             },
         });
-        t.nonNull.list.nonNull.field("review", {
+        t.field("reviewById", {
             type: "Review",
             args: {
-                id: (0, nexus_1.intArg)(),
+                id: (0, nexus_1.nonNull)((0, nexus_1.intArg)()),
             },
             resolve(_parent, args, _context, _info) {
                 return __awaiter(this, void 0, void 0, function* () {
-                    const { id } = args;
-                    const review = yield entities_1.Review.findOne({ where: { id } });
-                    if (!review)
-                        throw new graphql_1.GraphQLError("Review not found.");
-                    return [review];
+                    try {
+                        const { id } = args;
+                        const review = yield entities_1.Review.findOne({ where: { id } });
+                        if (!review) {
+                            throw new graphql_1.GraphQLError(`Review not found`);
+                        }
+                        return review;
+                    }
+                    catch (error) {
+                        (0, errorHandler_1.popErr)(error);
+                    }
                 });
             },
         });
         t.nonNull.list.nonNull.field("reviewsByMovie", {
             type: "Review",
             args: {
-                page: (0, nexus_1.intArg)(),
-                limit: (0, nexus_1.intArg)(),
-                movieId: (0, nexus_1.nonNull)((0, nexus_1.intArg)())
+                movieId: (0, nexus_1.nonNull)((0, nexus_1.intArg)()),
+            },
+            resolve(_parent, args, _context, _info) {
+                const { movieId } = args;
+                return entities_1.Review.find({ where: { movieId } });
+            },
+        });
+        t.nonNull.list.nonNull.field("reviewsByMoviePaginated", {
+            type: "Review",
+            args: {
+                movieId: (0, nexus_1.nonNull)((0, nexus_1.intArg)()),
+                page: (0, nexus_1.nonNull)((0, nexus_1.intArg)()),
+                limit: (0, nexus_1.nonNull)((0, nexus_1.intArg)()),
             },
             resolve(_parent, args, _context, _info) {
                 return __awaiter(this, void 0, void 0, function* () {
                     try {
-                        const { page, limit, movieId } = args;
-                        const pageNum = page || 1;
-                        const _limit = limit || 10;
-                        const _offset = _limit * (pageNum - 1);
+                        const { movieId, page, limit } = args;
+                        const offset = (page - 1) * limit;
                         const reviews = yield entities_1.Review.find({
-                            where: {
-                                movieId,
-                            },
-                            skip: _offset,
-                            take: _limit,
+                            where: { movieId },
+                            skip: offset,
+                            take: limit,
                         });
                         return reviews;
                     }
@@ -80,7 +104,7 @@ exports.ReviewQuery = (0, nexus_1.extendType)({
                         (0, errorHandler_1.popErr)(error);
                     }
                 });
-            }
+            },
         });
     },
 });
@@ -97,9 +121,7 @@ exports.ReviewMutation = (0, nexus_1.extendType)({
             resolve(_parent, args, context, _info) {
                 try {
                     const { movieId, rating, comment } = args;
-                    console.log({ movieId, rating, comment }, "asdas0");
                     const { userId } = context;
-                    console.log(userId, "asdasuser");
                     if (!userId)
                         throw new graphql_1.GraphQLError("Not Authorized to perform this action.");
                     const movie = entities_1.Movie.findOne({ where: { id: movieId } });
